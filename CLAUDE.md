@@ -75,6 +75,11 @@ A negative margin means a shortfall even if every order arrives on time.
 | Port disruption or closure | Official notice or two reports | 7 days |
 | Strike | Announced or under way | 14 days |
 | Factory fire or major damage | Official notice or two reports | 30 days |
+| Customs order blocking imports | Official notice or two reports | 30 days |
+
+**Our sources:** two live feeds read when the page opens, USGS earthquakes and GDACS
+cyclones and floods (kept if within 500 km of a site we watch), plus hand-researched
+news in data/warnings.js. A failed feed shows "couldn't check", never all clear.
 
 **Avoiding alert fatigue:** one event gets one email, even if it hits several
 suppliers. Known stock gaps stay in a dashboard panel rather than repeating as alerts.

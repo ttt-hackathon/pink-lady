@@ -8,6 +8,7 @@
 (function () {
   const BOX_ID = "risk";
   const STYLE_ID = "risk-styles";
+  const RISK_CHANGED_EVENT = "laurelridge:risk-changed";
   const MS_PER_DAY = 86400000;
   const DAYS_PER_WEEK = 7;
   const ONLY_SOURCE_YES = "Yes";
@@ -46,6 +47,7 @@
     port: { assumedDelayDays: 7, meetsMinimum: () => true },
     strike: { assumedDelayDays: 14, meetsMinimum: () => true },
     fire: { assumedDelayDays: 30, meetsMinimum: () => true },
+    customs: { assumedDelayDays: 30, meetsMinimum: () => true },
   };
 
   const STYLES = `
@@ -282,7 +284,9 @@
    */
   function hasSourceAndDate(warning) {
     const sources = warning.sources || [];
-    return sources.length > 0 && sources.every((source) => Boolean(source.url)) && !Number.isNaN(toUtcMs(warning.date));
+    return sources.length > 0
+      && sources.every((source) => /^https?:\/\//.test(source.url || ""))
+      && !Number.isNaN(toUtcMs(warning.date));
   }
 
   /**
@@ -576,13 +580,15 @@
   }
 
   let testWarnings = [];
+  let liveWarnings = [];
+  let failedFeeds = [];
 
   /**
-   * Scores the current data, including any test warnings that are switched on.
+   * Scores the current data, including live warnings and any test warnings switched on.
    * @returns {{suppliers: Object[], evaluations: Object[]}} The current result.
    */
   function currentRisk() {
-    return assessRisk(window.LAUREL_RIDGE, [...readRealWarnings().warnings, ...testWarnings]);
+    return assessRisk(window.LAUREL_RIDGE, [...readRealWarnings().warnings, ...liveWarnings, ...testWarnings]);
   }
 
   /**
@@ -600,11 +606,12 @@
     const gaps = findStockGaps(suppliers);
     const { lastChecked } = readRealWarnings();
     const warningStatus = lastChecked
-      ? `Outside warning signs were last checked ${escapeHtml(formatShortDate(toUtcMs(lastChecked)))}.`
+      ? `News was last checked ${escapeHtml(formatShortDate(toUtcMs(lastChecked)))}. Normal means no warning passed our checks, not that nothing is happening at that supplier.`
       : "Outside warning signs aren't connected yet, so Normal doesn't yet mean nothing is happening at that supplier.";
+    const feedProblem = failedFeeds.length ? ` Couldn't check: ${escapeHtml(failedFeeds.join(", "))}.` : "";
     box.innerHTML = `
       <h2>Supplier risk</h2>
-      <p class="risk-lead">Ranked by production impact. Our stock and order data is as of ${escapeHtml(formatShortDate(toUtcMs(data.asOf)))}. ${warningStatus}</p>
+      <p class="risk-lead">Ranked by production impact. Our stock and order data is as of ${escapeHtml(formatShortDate(toUtcMs(data.asOf)))}. ${warningStatus}${feedProblem}</p>
       ${testWarnings.length ? `<p class="risk-test-note">TEST MODE: Cataloochee Cell Works is showing fictional test warnings.</p>` : ""}
       ${renderGlance(suppliers)}
       ${renderTiles(data, suppliers, gaps)}
@@ -622,7 +629,32 @@
     render();
   }
 
+  /**
+   * Stores warnings from the live feeds, then tells the other sections to redraw.
+   * @param {Object[]} warnings Warnings read from the live feeds.
+   * @param {string[]} failedFeedNames Names of feeds that couldn't be read.
+   * @returns {void}
+   */
+  function setLiveWarnings(warnings, failedFeedNames) {
+    liveWarnings = warnings;
+    failedFeeds = failedFeedNames;
+    render();
+    document.dispatchEvent(new CustomEvent(RISK_CHANGED_EVENT));
+  }
+
+  /**
+   * Lists the live feeds that couldn't be read.
+   * @returns {string[]} Feed names.
+   */
+  function getFailedFeeds() {
+    return failedFeeds;
+  }
+
   window.LaurelRidgeRisk = {
+    EARTHQUAKE_MAX_DISTANCE_KM,
+    RISK_CHANGED_EVENT,
+    getFailedFeeds,
+    setLiveWarnings,
     LEVEL_ALERT,
     LEVEL_WATCH,
     LEVEL_NORMAL,

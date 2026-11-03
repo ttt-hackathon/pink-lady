@@ -262,10 +262,12 @@ ${safe(email.body)}</div>
       return `<div class="alerts-status"><p class="alerts-status-text">No real warnings have been loaded yet, so this can't confirm that all is clear.</p></div>`;
     }
     const checked = risk.formatShortDate(risk.toUtcMs(lastChecked));
+    const failed = risk.getFailedFeeds();
+    const feedProblem = failed.length ? ` <strong>Couldn't check: ${risk.escapeHtml(failed.join(", "))}.</strong>` : "";
     const message = realAlerts.length
-      ? `<strong>${realAlerts.length} real ${realAlerts.length === 1 ? "alert" : "alerts"}.</strong> Warnings last checked ${risk.escapeHtml(checked)}.`
-      : `No warning currently passes all four checks. Warnings last checked ${risk.escapeHtml(checked)}.`;
-    return `<div class="alerts-status"><p class="alerts-status-text">${message}</p></div>${renderCounts(realEvaluations)}`;
+      ? `<strong>${realAlerts.length} real ${realAlerts.length === 1 ? "alert" : "alerts"}.</strong> News last checked ${risk.escapeHtml(checked)}.`
+      : `No real warning currently passes all four checks. News last checked ${risk.escapeHtml(checked)}.`;
+    return `<div class="alerts-status"><p class="alerts-status-text">${message}${feedProblem}</p></div>${renderCounts(realEvaluations)}`;
   }
 
   /**
@@ -352,5 +354,6 @@ ${safe(email.body)}</div>
   if (box && window.LaurelRidgeRisk && window.LAUREL_RIDGE) {
     injectStyles();
     render(box);
+    document.addEventListener(window.LaurelRidgeRisk.RISK_CHANGED_EVENT, () => render(box));
   }
 })();
