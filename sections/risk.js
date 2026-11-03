@@ -1,8 +1,8 @@
 /**
  * Supplier risk section. Works out each supplier's impact tier, tightest stock
- * margin and weekly revenue at risk from window.LAUREL_RIDGE, then draws the
- * ranked result into <div id="risk">. Other sections can reuse the numbers through
- * window.LaurelRidgeRisk.
+ * margin, weekly revenue at risk, level and reason from window.LAUREL_RIDGE, then
+ * draws headline numbers, the ranked supplier table and the stock gap panel into
+ * <div id="risk">. Other sections can reuse the numbers through window.LaurelRidgeRisk.
  */
 (function () {
   const BOX_ID = "risk";
@@ -10,9 +10,12 @@
   const MS_PER_DAY = 86400000;
   const DAYS_PER_WEEK = 7;
   const ONLY_SOURCE_YES = "Yes";
+  const THIN_MARGIN_DAYS = 14;
   const TIER_STOPS_ALL = 1;
   const TIER_STOPS_SOME = 2;
   const TIER_HAS_BACKUP = 3;
+  const LEVEL_NORMAL = "Normal";
+  const LEVEL_WATCH = "Watch";
 
   const TIER_LABELS = {
     [TIER_STOPS_ALL]: "Stops every bike, no other source",
@@ -20,17 +23,32 @@
     [TIER_HAS_BACKUP]: "Another source is approved",
   };
 
+  const LEVEL_ICONS = { [LEVEL_NORMAL]: "●", [LEVEL_WATCH]: "▲" };
+
   const STYLES = `
-    .risk-lead { margin: 0 0 14px; color: var(--muted); }
+    .frame-box p.risk-lead { margin: 0 0 16px; color: var(--muted); max-width: 820px; }
+    .risk-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 24px; }
+    .risk-tile { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+    .risk-tile-label { font-size: 13px; font-weight: 600; color: var(--muted); }
+    .risk-tile-value { font-size: 28px; font-weight: 700; line-height: 1.25; font-variant-numeric: tabular-nums; }
+    .risk-tile-note { font-size: 13px; color: var(--muted); }
+    .frame-box h3.risk-heading { font-size: 17px; margin: 28px 0 4px; }
     .risk-table-wrap { overflow-x: auto; }
-    .risk-table { width: 100%; border-collapse: collapse; font-size: 15px; }
+    .risk-table { width: 100%; min-width: 760px; border-collapse: collapse; font-size: 15px; }
     .risk-table th { text-align: left; font-size: 13px; font-weight: 600; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
     .risk-table td { padding: 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
     .risk-table tr:last-child td { border-bottom: none; }
     .risk-table .risk-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-    .risk-supplier { font-weight: 600; }
+    .risk-table th.risk-tier-row { padding-top: 18px; font-size: 14px; color: var(--ink); white-space: normal; }
+    .risk-tier-note { font-weight: 400; color: var(--muted); }
+    .risk-supplier { font-weight: 600; min-width: 170px; }
     .risk-place { display: block; font-size: 13px; font-weight: 400; color: var(--muted); }
     .risk-short { font-weight: 700; }
+    .risk-level { display: inline-block; white-space: nowrap; font-size: 13px; font-weight: 600; padding: 2px 8px; border-radius: 999px; }
+    .risk-level-normal { padding-left: 0; }
+    .risk-level-normal .risk-level-icon { color: #0ca30c; }
+    .risk-why { min-width: 260px; }
+    .risk-level-watch { background: #fab219; color: #0b0b0b; }
   `;
 
   /**
@@ -71,14 +89,41 @@
   }
 
   /**
+   * Writes a day count with the right word.
+   * @param {number} days Number of days, zero or more.
+   * @returns {string} A phrase such as "1 day" or "13 days".
+   */
+  function formatDays(days) {
+    return `${days} ${days === 1 ? "day" : "days"}`;
+  }
+
+  /**
    * Describes a margin in plain English.
    * @param {number} marginDays Days between run-out and next delivery; negative is a shortfall.
    * @returns {string} A phrase such as "15 days short" or "13 days spare".
    */
   function describeMargin(marginDays) {
-    const days = Math.abs(marginDays);
-    const unit = days === 1 ? "day" : "days";
-    return marginDays < 0 ? `${days} ${unit} short` : `${days} ${unit} spare`;
+    return `${formatDays(Math.abs(marginDays))} ${marginDays < 0 ? "short" : "spare"}`;
+  }
+
+  /**
+   * Finds the part with the smallest margin.
+   * @param {Object[]} parts Assessed parts.
+   * @returns {?Object} The tightest part, or null if none has an open order.
+   */
+  function findTightestPart(parts) {
+    return parts
+      .filter((part) => part.marginDays !== null)
+      .reduce((tightest, part) => (!tightest || part.marginDays < tightest.marginDays ? part : tightest), null);
+  }
+
+  /**
+   * Adds up weekly revenue at retail price across products.
+   * @param {Object[]} products Rows from products.
+   * @returns {number} Weekly revenue in US dollars.
+   */
+  function sumWeeklyRevenue(products) {
+    return products.reduce((total, product) => total + product.weekly_build_rate * product.retail_price_usd, 0);
   }
 
   /**
@@ -107,19 +152,28 @@
   }
 
   /**
-   * Works out one product's weekly revenue at retail price.
-   * @param {Object} product Row from products.
-   * @returns {number} Weekly revenue in US dollars.
+   * Explains a supplier's stock-based level, using our own data only.
+   * @param {?Object} watchPart The part with no other source and a thin margin, if any.
+   * @param {?Object} tightestPart The supplier's tightest part, if any.
+   * @param {number} tier The supplier's impact tier.
+   * @returns {string} A plain-English reason.
    */
-  function weeklyRevenue(product) {
-    return product.weekly_build_rate * product.retail_price_usd;
+  function describeStockReason(watchPart, tightestPart, tier) {
+    if (watchPart && watchPart.marginDays < 0) {
+      return `${watchPart.description} runs out ${formatShortDate(watchPart.runOutMs)}, ${formatDays(-watchPart.marginDays)} before its next delivery on ${formatShortDate(watchPart.nextArrivalMs)}.`;
+    }
+    if (watchPart) {
+      return `${watchPart.description} has only ${formatDays(watchPart.marginDays)} spare if its ${formatShortDate(watchPart.nextArrivalMs)} delivery slips.`;
+    }
+    const opening = tier === TIER_HAS_BACKUP ? "Another source is approved." : "No stock concern in our data.";
+    return tightestPart ? `${opening} ${tightestPart.description} has ${describeMargin(tightestPart.marginDays)}.` : opening;
   }
 
   /**
-   * Assesses one supplier's production impact and stock position.
+   * Assesses one supplier's production impact, stock position and level.
    * @param {Object} supplier Row from suppliers.
    * @param {Object} data The window.LAUREL_RIDGE data.
-   * @returns {Object} The supplier with tier, revenueAtRisk, parts and tightestPart.
+   * @returns {Object} The supplier with tier, revenueAtRisk, parts, tightestPart, level and reason.
    */
   function assessSupplier(supplier, data) {
     const parts = data.parts
@@ -128,7 +182,6 @@
     const onlySourceParts = parts.filter((part) => part.only_source === ONLY_SOURCE_YES);
     const stoppedModels = data.products.filter((product) =>
       onlySourceParts.some((part) => part.models.includes(product)));
-    const revenueAtRisk = stoppedModels.reduce((total, product) => total + weeklyRevenue(product), 0);
 
     let tier = TIER_HAS_BACKUP;
     if (stoppedModels.length === data.products.length) {
@@ -137,11 +190,21 @@
       tier = TIER_STOPS_SOME;
     }
 
-    const tightestPart = parts
-      .filter((part) => part.marginDays !== null)
-      .reduce((tightest, part) => (!tightest || part.marginDays < tightest.marginDays ? part : tightest), null);
+    const tightestPart = findTightestPart(parts);
+    const tightestOnlySource = findTightestPart(onlySourceParts);
+    const watchPart = tightestOnlySource && tightestOnlySource.marginDays < THIN_MARGIN_DAYS ? tightestOnlySource : null;
 
-    return { ...supplier, tier, revenueAtRisk, parts, onlySourceParts, stoppedModels, tightestPart };
+    return {
+      ...supplier,
+      tier,
+      revenueAtRisk: sumWeeklyRevenue(stoppedModels),
+      parts,
+      onlySourceParts,
+      stoppedModels,
+      tightestPart,
+      level: watchPart ? LEVEL_WATCH : LEVEL_NORMAL,
+      reason: describeStockReason(watchPart, tightestPart, tier),
+    };
   }
 
   /**
@@ -157,7 +220,62 @@
   }
 
   /**
-   * Builds one ranked table row.
+   * Lists parts that run out before their next delivery, biggest shortfall first.
+   * @param {Object[]} suppliers Assessed suppliers.
+   * @returns {Object[]} Short parts, each with its supplier's name added.
+   */
+  function findStockGaps(suppliers) {
+    return suppliers
+      .flatMap((supplier) => supplier.parts.map((part) => ({ ...part, supplierName: supplier.supplier_name })))
+      .filter((part) => part.marginDays !== null && part.marginDays < 0)
+      .sort((a, b) => a.marginDays - b.marginDays);
+  }
+
+  /**
+   * Builds the status label, which pairs an icon with text so it never relies on color alone.
+   * @param {string} level The supplier's level.
+   * @returns {string} The label's HTML.
+   */
+  function renderLevel(level) {
+    return `<span class="risk-level risk-level-${level.toLowerCase()}"><span class="risk-level-icon" aria-hidden="true">${LEVEL_ICONS[level]}</span> ${escapeHtml(level)}</span>`;
+  }
+
+  /**
+   * Builds one headline number.
+   * @param {string} label What the number is.
+   * @param {string} value The number.
+   * @param {string} note Short context under the number.
+   * @returns {string} The tile's HTML.
+   */
+  function renderTile(label, value, note) {
+    return `<div class="risk-tile">
+      <div class="risk-tile-label">${escapeHtml(label)}</div>
+      <div class="risk-tile-value">${escapeHtml(value)}</div>
+      <div class="risk-tile-note">${escapeHtml(note)}</div>
+    </div>`;
+  }
+
+  /**
+   * Builds the row of headline numbers.
+   * @param {Object} data The window.LAUREL_RIDGE data.
+   * @param {Object[]} suppliers Assessed suppliers.
+   * @param {Object[]} gaps Parts that run out before their next delivery.
+   * @returns {string} The tiles' HTML.
+   */
+  function renderTiles(data, suppliers, gaps) {
+    const weeklyBikes = data.products.reduce((total, product) => total + product.weekly_build_rate, 0);
+    const noBackup = suppliers.filter((supplier) => supplier.tier !== TIER_HAS_BACKUP).length;
+    const firstGap = gaps.reduce((first, part) => (!first || part.runOutMs < first.runOutMs ? part : first), null);
+    return `<div class="risk-tiles">
+      ${renderTile("Weekly revenue at stake", formatUsd(sumWeeklyRevenue(data.products)), `${weeklyBikes} bikes a week, at retail price`)}
+      ${renderTile("Suppliers with no backup", `${noBackup} of ${suppliers.length}`, "For at least one part")}
+      ${renderTile("Parts short of next delivery", String(gaps.length), "Even if every order arrives on time")}
+      ${firstGap ? renderTile("First part to run short", formatShortDate(firstGap.runOutMs), firstGap.description) : ""}
+    </div>`;
+  }
+
+  /**
+   * Builds one supplier row.
    * @param {Object} supplier An assessed supplier.
    * @returns {string} The row's HTML.
    */
@@ -168,11 +286,62 @@
     return `<tr>
       <td class="risk-supplier">${escapeHtml(supplier.supplier_name)}
         <span class="risk-place">${escapeHtml(supplier.factory_city)}, ${escapeHtml(supplier.factory_country)}</span></td>
-      <td>Tier ${supplier.tier}<span class="risk-place">${escapeHtml(TIER_LABELS[supplier.tier])}</span></td>
+      <td>${renderLevel(supplier.level)}</td>
       <td class="risk-num">${escapeHtml(revenue)}</td>
       <td class="risk-num${marginClass}">${tight ? escapeHtml(describeMargin(tight.marginDays)) : "No open order"}</td>
-      <td>${tight ? escapeHtml(tight.description) : ""}</td>
+      <td class="risk-why">${escapeHtml(supplier.reason)}</td>
     </tr>`;
+  }
+
+  /**
+   * Builds the supplier table, grouped by impact tier.
+   * @param {Object[]} suppliers Assessed suppliers, already ranked.
+   * @returns {string} The table's HTML.
+   */
+  function renderSupplierTable(suppliers) {
+    const groups = [TIER_STOPS_ALL, TIER_STOPS_SOME, TIER_HAS_BACKUP].map((tier) => {
+      const rows = suppliers.filter((supplier) => supplier.tier === tier);
+      if (!rows.length) {
+        return "";
+      }
+      return `<tr><th colspan="5" scope="colgroup" class="risk-tier-row">Tier ${tier} <span class="risk-tier-note">· ${escapeHtml(TIER_LABELS[tier])}</span></th></tr>
+        ${rows.map(renderSupplierRow).join("")}`;
+    }).join("");
+    return `<div class="risk-table-wrap"><table class="risk-table">
+      <thead><tr><th>Supplier</th><th>Level</th><th class="risk-num">Weekly revenue at risk</th><th class="risk-num">Margin</th><th>Why</th></tr></thead>
+      <tbody>${groups}</tbody>
+    </table></div>`;
+  }
+
+  /**
+   * Builds the stock gap panel.
+   * @param {Object[]} gaps Parts that run out before their next delivery.
+   * @param {number} productCount How many models we build.
+   * @returns {string} The panel's HTML.
+   */
+  function renderStockGaps(gaps, productCount) {
+    if (!gaps.length) {
+      return `<h3 class="risk-heading">Known stock gaps</h3><p>No part runs out before its next delivery.</p>`;
+    }
+    const rows = gaps.map((part) => {
+      const bikes = part.models.length === productCount
+        ? "All three models"
+        : part.models.map((model) => model.product_name).join(", ");
+      return `<tr>
+        <td class="risk-supplier">${escapeHtml(part.description)}<span class="risk-place">${escapeHtml(part.supplierName)}</span></td>
+        <td>${escapeHtml(bikes)}</td>
+        <td class="risk-num">${escapeHtml(formatUsd(sumWeeklyRevenue(part.models)))}</td>
+        <td class="risk-num">${escapeHtml(formatShortDate(part.runOutMs))}</td>
+        <td class="risk-num">${escapeHtml(formatShortDate(part.nextArrivalMs))}</td>
+        <td class="risk-num risk-short">${escapeHtml(formatDays(-part.marginDays))}</td>
+      </tr>`;
+    }).join("");
+    return `<h3 class="risk-heading">Known stock gaps</h3>
+      <p class="risk-lead">These parts run out before their next delivery, based on our own stock and orders at normal production. They aren't reports of any event at these suppliers.</p>
+      <div class="risk-table-wrap"><table class="risk-table">
+        <thead><tr><th>Part</th><th>Bikes affected</th><th class="risk-num">Weekly revenue affected</th><th class="risk-num">Runs out</th><th class="risk-num">Next delivery</th><th class="risk-num">Short by</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>`;
   }
 
   /**
@@ -200,18 +369,17 @@
       return;
     }
     injectStyles();
+    const suppliers = assessSuppliers(data);
+    const gaps = findStockGaps(suppliers);
     box.innerHTML = `
       <h2>Supplier risk</h2>
-      <p class="risk-lead">Ranked by production impact, using our stock and order data as of ${escapeHtml(formatShortDate(toUtcMs(data.asOf)))}. Outside warning signs aren't connected yet.</p>
-      <div class="risk-table-wrap">
-        <table class="risk-table">
-          <thead><tr><th>Supplier</th><th>Impact</th><th class="risk-num">Weekly revenue at risk</th><th class="risk-num">Margin</th><th>Tightest part</th></tr></thead>
-          <tbody>${assessSuppliers(data).map(renderSupplierRow).join("")}</tbody>
-        </table>
-      </div>`;
+      <p class="risk-lead">Ranked by production impact. Levels use our stock and order data as of ${escapeHtml(formatShortDate(toUtcMs(data.asOf)))}. Outside warning signs aren't connected yet, so Normal doesn't yet mean nothing is happening at that supplier.</p>
+      ${renderTiles(data, suppliers, gaps)}
+      ${renderSupplierTable(suppliers)}
+      ${renderStockGaps(gaps, data.products.length)}`;
   }
 
-  window.LaurelRidgeRisk = { assessSuppliers, describeMargin, formatShortDate, formatUsd, escapeHtml };
+  window.LaurelRidgeRisk = { assessSuppliers, findStockGaps, describeMargin, formatShortDate, formatUsd, escapeHtml };
 
   if (window.LAUREL_RIDGE) {
     render(window.LAUREL_RIDGE);
