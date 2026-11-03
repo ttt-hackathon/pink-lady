@@ -1,8 +1,9 @@
 /**
- * Supplier risk section. Works out each supplier's impact tier, tightest stock
- * margin, weekly revenue at risk, level and reason from window.LAUREL_RIDGE, then
- * draws headline numbers, the ranked supplier table and the stock gap panel into
- * <div id="risk">. Other sections can reuse the numbers through window.LaurelRidgeRisk.
+ * Supplier risk section. Holds the scoring rules: each supplier's impact tier, stock
+ * margin and revenue at risk come from window.LAUREL_RIDGE, and each warning in
+ * window.LAUREL_RIDGE_WARNINGS goes through the four checks in our plan. Draws the
+ * severity overview, ranked supplier table and stock gap panel into <div id="risk">.
+ * Other sections reuse the results through window.LaurelRidgeRisk.
  */
 (function () {
   const BOX_ID = "risk";
@@ -11,11 +12,22 @@
   const DAYS_PER_WEEK = 7;
   const ONLY_SOURCE_YES = "Yes";
   const THIN_MARGIN_DAYS = 14;
+  const MAX_WARNING_AGE_DAYS = 7;
+  const FUTURE_DATE_TOLERANCE_DAYS = 1;
+  const MIN_INDEPENDENT_REPORTS = 2;
+  const EARTHQUAKE_MIN_MAGNITUDE = 6;
+  const EARTHQUAKE_MAX_DISTANCE_KM = 100;
+  const STORM_ALERT_LEVELS = ["orange", "red", "severe", "extreme"];
+  const METER_RANGE_DAYS = 35;
+  const METER_MIN_FILL_PCT = 2;
+  const METER_HALF_WIDTH_PCT = 50;
   const TIER_STOPS_ALL = 1;
   const TIER_STOPS_SOME = 2;
   const TIER_HAS_BACKUP = 3;
   const LEVEL_NORMAL = "Normal";
   const LEVEL_WATCH = "Watch";
+  const LEVEL_ALERT = "Alert";
+  const LEVELS_MOST_SEVERE_FIRST = [LEVEL_ALERT, LEVEL_WATCH, LEVEL_NORMAL];
 
   const TIER_LABELS = {
     [TIER_STOPS_ALL]: "Stops every bike, no other source",
@@ -23,16 +35,42 @@
     [TIER_HAS_BACKUP]: "Another source is approved",
   };
 
-  const LEVEL_ICONS = { [LEVEL_NORMAL]: "●", [LEVEL_WATCH]: "▲" };
+  const LEVEL_ICONS = { [LEVEL_ALERT]: "■", [LEVEL_WATCH]: "▲", [LEVEL_NORMAL]: "●" };
+
+  const WARNING_KINDS = {
+    earthquake: {
+      assumedDelayDays: 14,
+      meetsMinimum: (warning) => warning.magnitude >= EARTHQUAKE_MIN_MAGNITUDE && warning.distanceKm <= EARTHQUAKE_MAX_DISTANCE_KM,
+    },
+    storm: { assumedDelayDays: 7, meetsMinimum: (warning) => STORM_ALERT_LEVELS.includes(warning.alertLevel) },
+    port: { assumedDelayDays: 7, meetsMinimum: () => true },
+    strike: { assumedDelayDays: 14, meetsMinimum: () => true },
+    fire: { assumedDelayDays: 30, meetsMinimum: () => true },
+  };
 
   const STYLES = `
+    :root { --risk-alert: #d03b3b; --risk-watch: #fab219; --risk-short: #ec835a; --risk-normal: #0ca30c; --risk-neutral: #c3c2b7; }
     .frame-box p.risk-lead { margin: 0 0 16px; color: var(--muted); max-width: 820px; }
+    .frame-box p.risk-test-note { margin: 0 0 16px; padding: 8px 12px; border: 1px dashed var(--muted); border-radius: 8px; color: var(--ink); font-size: 14px; font-weight: 600; }
+    .risk-glance { margin-bottom: 20px; }
+    .risk-glance-bar { display: flex; gap: 2px; height: 12px; margin: 6px 0 8px; }
+    .risk-glance-segment { min-width: 8px; border-radius: 4px; }
+    .risk-glance-alert { background: var(--risk-alert); }
+    .risk-glance-watch { background: var(--risk-watch); }
+    .risk-glance-normal { background: var(--risk-normal); }
+    .risk-glance-title { font-size: 13px; font-weight: 600; color: var(--muted); }
+    .risk-glance-legend { display: flex; flex-wrap: wrap; gap: 6px 20px; font-size: 15px; }
+    .risk-glance-count { font-weight: 700; font-variant-numeric: tabular-nums; }
+    .risk-icon-alert { color: var(--risk-alert); }
+    .risk-icon-watch { color: var(--risk-watch); }
+    .risk-icon-normal { color: var(--risk-normal); }
     .risk-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 24px; }
     .risk-tile { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
     .risk-tile-label { font-size: 13px; font-weight: 600; color: var(--muted); }
     .risk-tile-value { font-size: 28px; font-weight: 700; line-height: 1.25; font-variant-numeric: tabular-nums; }
     .risk-tile-note { font-size: 13px; color: var(--muted); }
     .frame-box h3.risk-heading { font-size: 17px; margin: 28px 0 4px; }
+    .frame-box p.risk-table-note { margin: 0 0 4px; font-size: 13px; }
     .risk-table-wrap { overflow-x: auto; }
     .risk-table { width: 100%; min-width: 760px; border-collapse: collapse; font-size: 15px; }
     .risk-table th { text-align: left; font-size: 13px; font-weight: 600; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
@@ -44,11 +82,21 @@
     .risk-supplier { font-weight: 600; min-width: 170px; }
     .risk-place { display: block; font-size: 13px; font-weight: 400; color: var(--muted); }
     .risk-short { font-weight: 700; }
+    .risk-row-alert { background: #fdeeee; }
+    .risk-row-alert td:first-child { box-shadow: inset 4px 0 0 var(--risk-alert); }
+    .risk-row-watch td:first-child { box-shadow: inset 4px 0 0 var(--risk-watch); }
     .risk-level { display: inline-block; white-space: nowrap; font-size: 13px; font-weight: 600; padding: 2px 8px; border-radius: 999px; }
     .risk-level-normal { padding-left: 0; }
-    .risk-level-normal .risk-level-icon { color: #0ca30c; }
+    .risk-level-normal .risk-level-icon { color: var(--risk-normal); }
+    .risk-level-watch { background: var(--risk-watch); color: #0b0b0b; }
+    .risk-level-alert { background: var(--risk-alert); color: #ffffff; }
     .risk-why { min-width: 260px; }
-    .risk-level-watch { background: #fab219; color: #0b0b0b; }
+    .risk-meter { position: relative; width: 110px; height: 6px; margin: 6px 0 0 auto; background: #efece4; border-radius: 3px; }
+    .risk-meter::after { content: ""; position: absolute; left: 50%; top: -2px; width: 1px; height: 10px; background: var(--muted); }
+    .risk-meter-fill { position: absolute; top: 0; height: 100%; border-radius: 3px; }
+    .risk-meter-short { background: var(--risk-short); }
+    .risk-meter-thin { background: var(--risk-watch); }
+    .risk-meter-ok { background: var(--risk-neutral); }
   `;
 
   /**
@@ -107,6 +155,25 @@
   }
 
   /**
+   * Describes a part's margin as a full phrase.
+   * @param {Object} part An assessed part with a margin.
+   * @returns {string} A phrase such as "Wheelset is 1 day short" or "Saddle has 27 days spare".
+   */
+  function describePartMargin(part) {
+    return `${part.description} ${part.marginDays < 0 ? "is" : "has"} ${describeMargin(part.marginDays)}`;
+  }
+
+  /**
+   * Picks the more severe of two levels.
+   * @param {string} first A level.
+   * @param {string} second A level.
+   * @returns {string} Whichever is more severe.
+   */
+  function moreSevere(first, second) {
+    return LEVELS_MOST_SEVERE_FIRST.indexOf(first) <= LEVELS_MOST_SEVERE_FIRST.indexOf(second) ? first : second;
+  }
+
+  /**
    * Finds the part with the smallest margin.
    * @param {Object[]} parts Assessed parts.
    * @returns {?Object} The tightest part, or null if none has an open order.
@@ -152,7 +219,7 @@
   }
 
   /**
-   * Explains a supplier's stock-based level, using our own data only.
+   * Explains a supplier's stock-based level, always labeled as our own data.
    * @param {?Object} watchPart The part with no other source and a thin margin, if any.
    * @param {?Object} tightestPart The supplier's tightest part, if any.
    * @param {number} tier The supplier's impact tier.
@@ -160,20 +227,20 @@
    */
   function describeStockReason(watchPart, tightestPart, tier) {
     if (watchPart && watchPart.marginDays < 0) {
-      return `${watchPart.description} runs out ${formatShortDate(watchPart.runOutMs)}, ${formatDays(-watchPart.marginDays)} before its next delivery on ${formatShortDate(watchPart.nextArrivalMs)}.`;
+      return `Our data: ${watchPart.description} runs out ${formatShortDate(watchPart.runOutMs)}, ${formatDays(-watchPart.marginDays)} before its next delivery on ${formatShortDate(watchPart.nextArrivalMs)}.`;
     }
     if (watchPart) {
-      return `${watchPart.description} has only ${formatDays(watchPart.marginDays)} spare if its ${formatShortDate(watchPart.nextArrivalMs)} delivery slips.`;
+      return `Our data: ${watchPart.description} has only ${formatDays(watchPart.marginDays)} spare if its ${formatShortDate(watchPart.nextArrivalMs)} delivery slips.`;
     }
     const opening = tier === TIER_HAS_BACKUP ? "Another source is approved." : "No stock concern in our data.";
-    return tightestPart ? `${opening} ${tightestPart.description} has ${describeMargin(tightestPart.marginDays)}.` : opening;
+    return tightestPart ? `${opening} ${describePartMargin(tightestPart)}.` : opening;
   }
 
   /**
-   * Assesses one supplier's production impact, stock position and level.
+   * Assesses one supplier's production impact and stock position.
    * @param {Object} supplier Row from suppliers.
    * @param {Object} data The window.LAUREL_RIDGE data.
-   * @returns {Object} The supplier with tier, revenueAtRisk, parts, tightestPart, level and reason.
+   * @returns {Object} The supplier with tier, revenue at risk, parts, decisionPart, level and reason.
    */
   function assessSupplier(supplier, data) {
     const parts = data.parts
@@ -202,21 +269,121 @@
       onlySourceParts,
       stoppedModels,
       tightestPart,
+      decisionPart: tightestOnlySource || tightestPart,
       level: watchPart ? LEVEL_WATCH : LEVEL_NORMAL,
       reason: describeStockReason(watchPart, tightestPart, tier),
     };
   }
 
   /**
-   * Assesses every supplier and ranks them, highest production impact first.
+   * Checks a warning has a source link and a usable date, which every warning must have.
+   * @param {Object} warning A warning record.
+   * @returns {boolean} True if it has at least one linked source and a valid date.
+   */
+  function hasSourceAndDate(warning) {
+    const sources = warning.sources || [];
+    return sources.length > 0 && sources.every((source) => Boolean(source.url)) && !Number.isNaN(toUtcMs(warning.date));
+  }
+
+  /**
+   * Applies the four checks to one affected supplier.
+   * @param {Object} supplier An assessed supplier.
+   * @param {Object} facts What's known about the warning.
+   * @param {boolean} facts.fresh Whether the warning is recent enough.
+   * @param {boolean} facts.confirmed Whether it's official or has two independent reports.
+   * @param {number} facts.assumedDelayDays The delay assumed for this kind of warning.
+   * @returns {Object} The supplier, its level and a plain-English explanation.
+   */
+  function checkSupplier(supplier, { fresh, confirmed, assumedDelayDays }) {
+    if (!fresh) {
+      return { supplier, level: LEVEL_NORMAL, why: `Older than ${MAX_WARNING_AGE_DAYS} days.` };
+    }
+    if (!confirmed) {
+      return supplier.tier === TIER_STOPS_ALL
+        ? { supplier, level: LEVEL_WATCH, why: "Unconfirmed report about a Tier 1 supplier. Needs an official source or a second report." }
+        : { supplier, level: LEVEL_NORMAL, why: "Unconfirmed report. Needs an official source or a second report." };
+    }
+    if (supplier.tier === TIER_HAS_BACKUP) {
+      return { supplier, level: LEVEL_WATCH, why: "Confirmed, but another source is approved, so it doesn't trigger an email." };
+    }
+    const part = supplier.decisionPart;
+    if (part && assumedDelayDays <= part.marginDays) {
+      return { supplier, level: LEVEL_WATCH, why: `Confirmed, but the assumed ${assumedDelayDays}-day delay fits within ${formatDays(part.marginDays)} spare on ${part.description}.` };
+    }
+    const position = part ? describePartMargin(part) : "No delivery is on order";
+    return { supplier, level: LEVEL_ALERT, why: `Confirmed, and the assumed ${assumedDelayDays}-day delay would reach the line. ${position}.` };
+  }
+
+  /**
+   * Runs one warning through the filter and the four checks.
+   * @param {Object} warning A warning record.
+   * @param {Object[]} suppliers Assessed suppliers.
+   * @param {number} nowMs The current time.
+   * @returns {Object} The warning, its most severe level, whether it was ignored, why and each supplier's outcome.
+   */
+  function evaluateWarning(warning, suppliers, nowMs) {
+    const rule = WARNING_KINDS[warning.kind];
+    const ignore = (why) => ({ warning, level: LEVEL_NORMAL, ignored: true, why, outcomes: [] });
+    if (!rule) {
+      return ignore(`Unknown kind of warning: ${warning.kind}.`);
+    }
+    if (!hasSourceAndDate(warning)) {
+      return ignore("No source link and date.");
+    }
+    if (!rule.meetsMinimum(warning)) {
+      return ignore("Below our minimum for this kind of warning.");
+    }
+    const ageDays = (nowMs - toUtcMs(warning.date)) / MS_PER_DAY;
+    const facts = {
+      fresh: ageDays >= -FUTURE_DATE_TOLERANCE_DAYS && ageDays <= MAX_WARNING_AGE_DAYS,
+      confirmed: warning.official === true || warning.sources.length >= MIN_INDEPENDENT_REPORTS,
+      assumedDelayDays: rule.assumedDelayDays,
+    };
+    const affected = suppliers.filter((supplier) => (warning.supplierIds || []).includes(supplier.supplier_id));
+    if (!affected.length) {
+      return ignore("Doesn't touch a site, port or route we depend on.");
+    }
+    const outcomes = affected.map((supplier) => checkSupplier(supplier, facts));
+    const level = outcomes.reduce((worst, outcome) => moreSevere(worst, outcome.level), LEVEL_NORMAL);
+    const lead = outcomes.find((outcome) => outcome.level === level);
+    return { warning, level, ignored: false, why: lead.why, outcomes };
+  }
+
+  /**
+   * Scores every supplier and warning, then ranks suppliers by impact and severity.
    * @param {Object} data The window.LAUREL_RIDGE data.
-   * @returns {Object[]} Suppliers by tier, then revenue at risk, then tightest margin.
+   * @param {Object[]} [warnings] Warning records to check.
+   * @param {number} [nowMs] The current time.
+   * @returns {{suppliers: Object[], evaluations: Object[]}} Ranked suppliers and each warning's result.
+   */
+  function assessRisk(data, warnings = [], nowMs = Date.now()) {
+    const assessed = data.suppliers.map((supplier) => assessSupplier(supplier, data));
+    const evaluations = warnings.map((warning) => evaluateWarning(warning, assessed, nowMs));
+    const suppliers = assessed.map((supplier) => {
+      const raised = evaluations.flatMap((evaluation) => evaluation.outcomes
+        .filter((outcome) => outcome.supplier === supplier && outcome.level !== LEVEL_NORMAL)
+        .map((outcome) => ({ ...outcome, warning: evaluation.warning })));
+      if (!raised.length) {
+        return supplier;
+      }
+      const level = raised.reduce((worst, outcome) => moreSevere(worst, outcome.level), supplier.level);
+      const warningReasons = raised.map((outcome) => `${outcome.warning.title}: ${outcome.why}`).join(" ");
+      return { ...supplier, level, reason: `${warningReasons} ${supplier.reason}` };
+    });
+    const marginOf = (supplier) => (supplier.tightestPart ? supplier.tightestPart.marginDays : Infinity);
+    const severityOf = (supplier) => LEVELS_MOST_SEVERE_FIRST.indexOf(supplier.level);
+    suppliers.sort((a, b) => a.tier - b.tier || severityOf(a) - severityOf(b)
+      || b.revenueAtRisk - a.revenueAtRisk || marginOf(a) - marginOf(b));
+    return { suppliers, evaluations };
+  }
+
+  /**
+   * Assesses every supplier against our own data only.
+   * @param {Object} data The window.LAUREL_RIDGE data.
+   * @returns {Object[]} Ranked suppliers.
    */
   function assessSuppliers(data) {
-    const marginOf = (supplier) => (supplier.tightestPart ? supplier.tightestPart.marginDays : Infinity);
-    return data.suppliers
-      .map((supplier) => assessSupplier(supplier, data))
-      .sort((a, b) => a.tier - b.tier || b.revenueAtRisk - a.revenueAtRisk || marginOf(a) - marginOf(b));
+    return assessRisk(data).suppliers;
   }
 
   /**
@@ -233,11 +400,34 @@
 
   /**
    * Builds the status label, which pairs an icon with text so it never relies on color alone.
-   * @param {string} level The supplier's level.
+   * @param {string} level The level to show.
    * @returns {string} The label's HTML.
    */
   function renderLevel(level) {
     return `<span class="risk-level risk-level-${level.toLowerCase()}"><span class="risk-level-icon" aria-hidden="true">${LEVEL_ICONS[level]}</span> ${escapeHtml(level)}</span>`;
+  }
+
+  /**
+   * Builds the bar and counts showing how many suppliers sit at each level.
+   * @param {Object[]} suppliers Assessed suppliers.
+   * @returns {string} The overview's HTML.
+   */
+  function renderGlance(suppliers) {
+    const counts = LEVELS_MOST_SEVERE_FIRST.map((level) => ({
+      level,
+      count: suppliers.filter((supplier) => supplier.level === level).length,
+    }));
+    const summary = counts.map(({ level, count }) => `${level} ${count}`).join(", ");
+    const segments = counts.filter(({ count }) => count > 0)
+      .map(({ level, count }) => `<div class="risk-glance-segment risk-glance-${level.toLowerCase()}" style="flex-grow:${count}" title="${level}: ${count}"></div>`)
+      .join("");
+    const legend = counts.map(({ level, count }) => `<span><span class="risk-icon-${level.toLowerCase()}" aria-hidden="true">${LEVEL_ICONS[level]}</span> ${level} <span class="risk-glance-count">${count}</span></span>`)
+      .join("");
+    return `<div class="risk-glance">
+      <div class="risk-glance-title">Severity across our ${suppliers.length} suppliers</div>
+      <div class="risk-glance-bar" role="img" aria-label="${escapeHtml(summary)}">${segments}</div>
+      <div class="risk-glance-legend">${legend}</div>
+    </div>`;
   }
 
   /**
@@ -275,7 +465,25 @@
   }
 
   /**
-   * Builds one supplier row.
+   * Builds the small bar showing a margin either side of zero.
+   * @param {number} marginDays Days between run-out and next delivery.
+   * @returns {string} The meter's HTML; the margin text beside it carries the value.
+   */
+  function renderMarginMeter(marginDays) {
+    const share = Math.min(Math.abs(marginDays) / METER_RANGE_DAYS, 1) * METER_HALF_WIDTH_PCT;
+    const widthPct = Math.max(share, METER_MIN_FILL_PCT);
+    const leftPct = marginDays < 0 ? METER_HALF_WIDTH_PCT - widthPct : METER_HALF_WIDTH_PCT;
+    let tone = "ok";
+    if (marginDays < 0) {
+      tone = "short";
+    } else if (marginDays < THIN_MARGIN_DAYS) {
+      tone = "thin";
+    }
+    return `<div class="risk-meter" aria-hidden="true"><span class="risk-meter-fill risk-meter-${tone}" style="left:${leftPct}%;width:${widthPct}%"></span></div>`;
+  }
+
+  /**
+   * Builds one supplier row, with a colored edge showing its severity.
    * @param {Object} supplier An assessed supplier.
    * @returns {string} The row's HTML.
    */
@@ -283,12 +491,12 @@
     const tight = supplier.tightestPart;
     const revenue = supplier.tier === TIER_HAS_BACKUP ? "Has backup" : formatUsd(supplier.revenueAtRisk);
     const marginClass = tight && tight.marginDays < 0 ? " risk-short" : "";
-    return `<tr>
+    return `<tr class="risk-row-${supplier.level.toLowerCase()}">
       <td class="risk-supplier">${escapeHtml(supplier.supplier_name)}
         <span class="risk-place">${escapeHtml(supplier.factory_city)}, ${escapeHtml(supplier.factory_country)}</span></td>
       <td>${renderLevel(supplier.level)}</td>
       <td class="risk-num">${escapeHtml(revenue)}</td>
-      <td class="risk-num${marginClass}">${tight ? escapeHtml(describeMargin(tight.marginDays)) : "No open order"}</td>
+      <td class="risk-num${marginClass}">${tight ? `${escapeHtml(describeMargin(tight.marginDays))}${renderMarginMeter(tight.marginDays)}` : "No open order"}</td>
       <td class="risk-why">${escapeHtml(supplier.reason)}</td>
     </tr>`;
   }
@@ -307,7 +515,8 @@
       return `<tr><th colspan="5" scope="colgroup" class="risk-tier-row">Tier ${tier} <span class="risk-tier-note">· ${escapeHtml(TIER_LABELS[tier])}</span></th></tr>
         ${rows.map(renderSupplierRow).join("")}`;
     }).join("");
-    return `<div class="risk-table-wrap"><table class="risk-table">
+    return `<p class="risk-table-note">Margin bars: left of the center line means a part runs out before its next delivery.</p>
+      <div class="risk-table-wrap"><table class="risk-table">
       <thead><tr><th>Supplier</th><th>Level</th><th class="risk-num">Weekly revenue at risk</th><th class="risk-num">Margin</th><th>Why</th></tr></thead>
       <tbody>${groups}</tbody>
     </table></div>`;
@@ -359,29 +568,82 @@
   }
 
   /**
+   * Reads the real warnings file, which may not be on the page.
+   * @returns {{lastChecked: ?string, warnings: Object[]}} The real warnings.
+   */
+  function readRealWarnings() {
+    return window.LAUREL_RIDGE_WARNINGS || { lastChecked: null, warnings: [] };
+  }
+
+  let testWarnings = [];
+
+  /**
+   * Scores the current data, including any test warnings that are switched on.
+   * @returns {{suppliers: Object[], evaluations: Object[]}} The current result.
+   */
+  function currentRisk() {
+    return assessRisk(window.LAUREL_RIDGE, [...readRealWarnings().warnings, ...testWarnings]);
+  }
+
+  /**
    * Draws the section into its box, if the box is on the page.
-   * @param {Object} data The window.LAUREL_RIDGE data.
    * @returns {void}
    */
-  function render(data) {
+  function render() {
     const box = document.getElementById(BOX_ID);
     if (!box) {
       return;
     }
     injectStyles();
-    const suppliers = assessSuppliers(data);
+    const data = window.LAUREL_RIDGE;
+    const { suppliers } = currentRisk();
     const gaps = findStockGaps(suppliers);
+    const { lastChecked } = readRealWarnings();
+    const warningStatus = lastChecked
+      ? `Outside warning signs were last checked ${escapeHtml(formatShortDate(toUtcMs(lastChecked)))}.`
+      : "Outside warning signs aren't connected yet, so Normal doesn't yet mean nothing is happening at that supplier.";
     box.innerHTML = `
       <h2>Supplier risk</h2>
-      <p class="risk-lead">Ranked by production impact. Levels use our stock and order data as of ${escapeHtml(formatShortDate(toUtcMs(data.asOf)))}. Outside warning signs aren't connected yet, so Normal doesn't yet mean nothing is happening at that supplier.</p>
+      <p class="risk-lead">Ranked by production impact. Our stock and order data is as of ${escapeHtml(formatShortDate(toUtcMs(data.asOf)))}. ${warningStatus}</p>
+      ${testWarnings.length ? `<p class="risk-test-note">TEST MODE: Cataloochee Cell Works is showing fictional test warnings.</p>` : ""}
+      ${renderGlance(suppliers)}
       ${renderTiles(data, suppliers, gaps)}
       ${renderSupplierTable(suppliers)}
       ${renderStockGaps(gaps, data.products.length)}`;
   }
 
-  window.LaurelRidgeRisk = { assessSuppliers, findStockGaps, describeMargin, formatShortDate, formatUsd, escapeHtml };
+  /**
+   * Switches test warnings on or off and redraws this section.
+   * @param {Object[]} warnings Test warnings to apply, or an empty list to clear them.
+   * @returns {void}
+   */
+  function setTestWarnings(warnings) {
+    testWarnings = warnings;
+    render();
+  }
+
+  window.LaurelRidgeRisk = {
+    LEVEL_ALERT,
+    LEVEL_WATCH,
+    LEVEL_NORMAL,
+    assessRisk,
+    assessSuppliers,
+    currentRisk,
+    describeMargin,
+    escapeHtml,
+    findStockGaps,
+    formatDays,
+    formatShortDate,
+    formatUsd,
+    injectStyles,
+    readRealWarnings,
+    renderLevel,
+    setTestWarnings,
+    sumWeeklyRevenue,
+    toUtcMs,
+  };
 
   if (window.LAUREL_RIDGE) {
-    render(window.LAUREL_RIDGE);
+    render();
   }
 })();
