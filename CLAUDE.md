@@ -30,6 +30,70 @@ Our team builds ONE dashboard together. Each person owns one section of it.
 
 ## Our team's plan
 
-(Once you've decided, ask Claude to write your plan here: what you're watching,
-what triggers an alert, which sections the dashboard has and who owns each one.
-Then save it to GitHub.)
+**Goal:** a stripped-down demo (MVP) that spots supply trouble early, ranks it by
+impact on production, and only raises alerts that really matter.
+
+**How we work:** all code is written on one machine, which owns index.html and every
+section. Teammates check sources, review thresholds and prepare the demo. The live
+link is https://ttt-hackathon.github.io/pink-lady/ . Each task must leave the
+dashboard presentable, and is saved to GitHub when it's done.
+
+**What we watch:** all 13 suppliers' sites and shipping routes, the ports of Savannah
+and Charleston, Hendersonville, and South Korea (Cataloochee's battery cells).
+
+**Margin:** days between a part running out and its next delivery, from our own data.
+A negative margin means a shortfall even if every order arrives on time.
+
+**Impact tiers** (from our own data, weekly revenue is at retail price):
+
+- Tier 1: stops every bike, no other approved source.
+- Tier 2: stops some bikes, no other approved source.
+- Tier 3: another source is approved. Can reach Watch but can't trigger an email,
+  until we confirm how quickly the backup can deliver.
+
+**Levels:**
+
+- Normal: no warning sign and no stock concern.
+- Watch: a warning passes checks 1 and 2 but not all four, or it's an unconfirmed
+  report about a Tier 1 supplier, or a part with no other source has under 14 days of
+  margin. Stock concerns are labeled as coming from our own data, never as an event.
+- Alert: a warning passes all four checks. Shows a banner and a ready-to-send email.
+
+**The four checks for an alert:**
+
+1. Real: official source or two independent reports, dated within the last 7 days.
+2. Touches us: affects a site, port or route we depend on.
+3. Matters: the supplier is Tier 1 or Tier 2.
+4. Reaches the line: the expected delay is longer than our margin.
+
+**Starting thresholds** (our judgment, adjust as needed):
+
+| Warning | Minimum to count | Assumed delay |
+| --- | --- | --- |
+| Earthquake | Magnitude 6+ within 100 km | 14 days |
+| Storm or flood | GDACS orange or red, or a US severe or extreme alert | 7 days |
+| Port disruption or closure | Official notice or two reports | 7 days |
+| Strike | Announced or under way | 14 days |
+| Factory fire or major damage | Official notice or two reports | 30 days |
+
+**Avoiding alert fatigue:** one event gets one email, even if it hits several
+suppliers. Known stock gaps stay in a dashboard panel rather than repeating as alerts.
+The page shows how many warnings were reviewed, on Watch and alerted.
+
+**Sections:**
+
+| Box | File | What it shows |
+| --- | --- | --- |
+| alerts | sections/alerts.js | Alert banner, ready-to-send email, Cataloochee test button |
+| risk | sections/risk.js | Tiers, margins, levels, reasons and the stock gap panel |
+| warnings | sections/warnings.js | Real warnings from data/warnings.js, each with source link and date |
+
+**Build order:** (1) this plan, (2) page frame, (3) tiers and margins, (4) risk table
+and stock gap panel, (5) research real warnings, (6) warnings list, (7) four checks
+and levels, (8) alert and email, (9) Cataloochee test button, (10) final live check.
+
+**If there's time:** USGS earthquakes feed, then GDACS disasters feed, showing
+"couldn't check" if a feed fails; no-repeat email rules; a supplier map.
+
+**Left out of the MVP:** checking where an order is when judging a delay, remembering
+which alerts were sent, automatic email sending and scheduled rechecks.
