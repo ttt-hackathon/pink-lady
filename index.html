@@ -5,27 +5,48 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Team Pink Lady · Supplier Early Warning</title>
 <style>
-  :root { --ink: #1f2a24; --muted: #5b6b62; --accent: #2f6b4f; --bg: #f6f4ee; --card: #ffffff; --line: #ddd8cc; }
+  :root {
+    color-scheme: light;
+    --ink: #1f2a24; --muted: #5b6b62; --accent: #2f6b4f; --bg: #f6f4ee; --card: #ffffff; --line: #ddd8cc;
+  }
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--ink); }
-  main { max-width: 640px; margin: 0 auto; padding: 72px 20px; }
-  .eyebrow { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
-  h1 { font-size: 36px; line-height: 1.15; margin: 12px 0 16px; }
-  p { font-size: 17px; line-height: 1.55; color: var(--muted); }
-  .card { margin-top: 32px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px 24px; }
-  .card p { margin: 0; }
-  .card strong { color: var(--ink); }
+  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--ink); line-height: 1.5; }
+  main { max-width: 1120px; margin: 0 auto; padding: 40px 20px 48px; }
+  a { color: var(--accent); }
+  .frame-eyebrow { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
+  h1 { font-size: 34px; line-height: 1.15; margin: 8px 0 8px; }
+  .frame-intro { font-size: 17px; color: var(--muted); margin: 0 0 28px; max-width: 720px; }
+  .frame-box { margin-top: 20px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px 24px; }
+  .frame-box h2 { font-size: 20px; margin: 0 0 6px; }
+  .frame-box p { margin: 0; color: var(--muted); }
+  .frame-note { font-size: 13px; color: var(--muted); margin: 28px 0 0; padding-top: 14px; border-top: 1px solid var(--line); }
+  @media (max-width: 560px) { main { padding: 28px 16px 40px; } h1 { font-size: 28px; } .frame-box { padding: 16px; } }
 </style>
 </head>
 <body>
 <main>
-  <div class="eyebrow">Laurel Ridge Bikeworks · Team Pink Lady</div>
+  <div class="frame-eyebrow">Laurel Ridge Bikeworks · Team Pink Lady</div>
   <h1>Supplier early-warning dashboard</h1>
-  <p>Coming soon. This page is the team's live link: whatever the team saves to GitHub as <code>index.html</code> shows up here within a minute or two.</p>
-  <div class="card">
-    <p><strong>Team Pink Lady:</strong> ask Claude to replace this page with your dashboard, then say "save my work to GitHub".</p>
-    <p style="margin-top:12px"><a href="Start-Here.html" style="color:var(--accent);font-weight:600">Open your Start Here page &rarr;</a></p>
-  </div>
+  <p class="frame-intro">Which supplier problems could stop our production line, and how soon. Ranked by impact, so the alerts that come through really matter.</p>
+
+  <section id="alerts" class="frame-box">
+    <h2>Alerts</h2>
+    <p>Not connected yet. Alerts appear here once warning signs are connected.</p>
+  </section>
+
+  <section id="risk" class="frame-box">
+    <h2>Supplier risk</h2>
+    <p>Being added.</p>
+  </section>
+
+  <section id="warnings" class="frame-box">
+    <h2>Warning signs</h2>
+    <p>Not connected yet. Real warnings appear here, each with its source link and date.</p>
+  </section>
+
+  <p class="frame-note">Laurel Ridge Bikeworks and Cataloochee Cell Works are fictional. The other suppliers are real companies, but every relationship, price, order and inventory number here is made up. <a href="Start-Here.html">Team Start Here page</a></p>
 </main>
+
+<script src="data/laurel-ridge-data.js"></script>
 </body>
 </html>
