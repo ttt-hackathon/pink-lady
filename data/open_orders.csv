@@ -1,0 +1,21 @@
+po_number,supplier_id,part_number,quantity,order_date,promised_ship_date,promised_arrival_date,ship_mode,us_port_of_entry,status
+PO-26-1187,S01,P-100,240,2026-10-13,2026-11-09,2026-11-10,Truck,,Confirmed
+PO-26-1203,S01,P-100,240,2026-10-27,2026-11-23,2026-11-24,Truck,,Confirmed
+PO-26-1215,S01,P-100,480,2026-11-02,2026-12-07,2026-12-08,Truck,,Confirmed
+PO-26-1042,S02,P-200,720,2026-08-04,2026-10-26,2026-12-01,Ocean,"Charleston, SC",In transit
+PO-26-1043,S02,P-201,720,2026-08-04,2026-10-26,2026-12-01,Ocean,"Charleston, SC",In transit
+PO-26-1098,S03,P-210,900,2026-09-01,2026-10-20,2026-11-25,Ocean,"Savannah, GA",In transit
+PO-26-1099,S03,P-211,900,2026-09-01,2026-10-20,2026-11-25,Ocean,"Savannah, GA",In transit
+PO-26-1110,S04,P-300,480,2026-09-08,2026-11-05,2026-12-15,Ocean,"Savannah, GA",Awaiting shipment
+PO-26-1111,S04,P-301,720,2026-09-08,2026-10-29,2026-12-08,Ocean,"Savannah, GA",In transit
+PO-26-1112,S04,P-302,240,2026-09-08,2026-10-29,2026-12-08,Ocean,"Savannah, GA",In transit
+PO-26-1121,S05,P-400,480,2026-09-15,2026-11-12,2026-12-17,Ocean,"Savannah, GA",Awaiting shipment
+PO-26-1130,S06,P-500,720,2026-08-25,2026-11-02,2026-12-08,Ocean,"Savannah, GA",Awaiting shipment
+PO-26-1131,S06,P-501,720,2026-08-25,2026-11-02,2026-12-08,Ocean,"Savannah, GA",Awaiting shipment
+PO-26-1150,S07,P-510,1440,2026-09-22,2026-11-03,2026-12-01,Ocean,"Savannah, GA",Awaiting shipment
+PO-26-1151,S08,P-600,1440,2026-09-22,2026-10-27,2026-12-01,Ocean,"Savannah, GA",In transit
+PO-26-1160,S09,P-700,2880,2026-10-06,2026-11-10,2026-12-08,Ocean,"Charleston, SC",Confirmed
+PO-26-1171,S10,P-710,320,2026-10-06,2026-11-04,2026-12-01,Ocean,"Charleston, SC",Confirmed
+PO-26-1175,S11,P-800,960,2026-10-13,2026-11-16,2026-12-22,Ocean,"Charleston, SC",Confirmed
+PO-26-1180,S12,P-810,1440,2026-10-13,2026-11-12,2026-12-15,Ocean,"Charleston, SC",Confirmed
+PO-26-1220,S13,P-900,600,2026-11-02,2026-11-04,2026-11-05,Truck,,Confirmed

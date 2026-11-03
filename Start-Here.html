@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Start Here · Team Pink Lady</title>
+<style>
+  :root {
+    --ink: #1f2a24; --muted: #56655c; --accent: #2f6b4f; --accent-soft: #e6f0ea;
+    --warn: #8a4b00; --warn-soft: #fff3df; --bg: #f6f4ee; --card: #ffffff; --line: #ddd8cc;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--ink); line-height: 1.55; font-size: 17px; }
+  main { max-width: 780px; margin: 0 auto; padding: 40px 20px 64px; }
+  .eyebrow { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
+  h1 { font-size: 40px; line-height: 1.1; margin: 8px 0 8px; }
+  .sub { color: var(--muted); margin: 0 0 28px; }
+  h2 { font-size: 23px; margin: 40px 0 12px; }
+  h3 { font-size: 18px; margin: 20px 0 6px; }
+  p { margin: 0 0 12px; }
+  a { color: var(--accent); }
+  code { background: #ece9e1; padding: 1px 6px; border-radius: 4px; font-size: 15px; }
+  .first { background: var(--warn-soft); border: 2px solid #e8b56a; border-radius: 12px; padding: 18px 22px; }
+  .first strong.big { display: block; font-size: 19px; margin-bottom: 6px; color: var(--warn); }
+  .first p:last-child { margin: 0; }
+  .links { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 16px; }
+  .link { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; }
+  .link span { display: block; font-size: 13px; color: var(--muted); }
+  .link a { word-break: break-all; font-weight: 600; }
+  .challenge { background: var(--accent-soft); border-left: 5px solid var(--accent); border-radius: 8px; padding: 16px 20px; font-size: 19px; font-weight: 600; }
+  ul, ol { margin: 0 0 12px; padding-left: 24px; }
+  li { margin-bottom: 6px; }
+  .done li::marker { content: "\2610  "; color: var(--accent); }
+  table { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; font-size: 16px; }
+  th, td { text-align: left; vertical-align: top; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+  th { background: #efece4; font-size: 14px; color: var(--muted); }
+  tr:last-child td { border-bottom: none; }
+  td:first-child { white-space: nowrap; font-weight: 600; }
+  .say { display: grid; gap: 10px; }
+  .say div { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; }
+  .say b { color: var(--accent); }
+  .stars { color: #b8860b; letter-spacing: 2px; }
+  .note { font-size: 14px; color: var(--muted); margin-top: 40px; border-top: 1px solid var(--line); padding-top: 16px; }
+  @media (max-width: 560px) { h1 { font-size: 32px; } body { font-size: 16px; } td:first-child { white-space: normal; } }
+  @media print { body { background: #fff; } .first { border-color: #999; } }
+</style>
+</head>
+<body>
+<main>
+
+  <div class="eyebrow">Laurel Ridge Bikeworks · Team Pink Lady</div>
+  <h1>Start Here</h1>
+  <p class="sub">Everything your team needs for today's hackathon.</p>
+
+  <div class="first">
+    <strong class="big">First: finish the setup steps in your welcome email.</strong>
+    <p>Do steps 1 to 9 in the email before anything on this page. You're ready when Claude has answered your first prompt in PowerShell. Stuck on an install? Raise your hand.</p>
+  </div>
+
+  <div class="links">
+    <div class="link"><span>Your team's live link (your finished tool appears here)</span><a href="https://ttt-hackathon.github.io/pink-lady/">ttt-hackathon.github.io/pink-lady</a></div>
+    <div class="link"><span>Your team's project on GitHub</span><a href="https://github.com/ttt-hackathon/pink-lady">github.com/ttt-hackathon/pink-lady</a></div>
+  </div>
+
+  <h2>The situation</h2>
+  <p>You work in purchasing at <strong>Laurel Ridge Bikeworks</strong>, an electric-bike maker in Hendersonville, NC. We build three models, about 120 bikes a week, from parts made by 13 suppliers in eight countries.</p>
+  <p>When a supplier has a problem, such as a storm, a fire, a strike or a backed-up port, we usually find out when a shipment doesn't arrive. By then the production line is days from stopping.</p>
+
+  <h2>Your challenge</h2>
+  <div class="challenge">Build an early-warning tool that spots supply chain trouble before it reaches our production line, and raises an alert when it does.</div>
+  <p style="margin-top:16px">Your team decides:</p>
+  <ul>
+    <li>which warning signs matter for these suppliers</li>
+    <li>which sources give the earliest reliable warning</li>
+    <li>what counts as serious enough for an alert, and what the alert tells purchasing to do</li>
+    <li>what the tool looks like</li>
+  </ul>
+
+  <h3>Your tool is finished when it:</h3>
+  <ol>
+    <li>Covers every supplier in <code>data/suppliers.csv</code>.</li>
+    <li>Watches at least two kinds of real, current warning signs, each shown with its source link and date.</li>
+    <li>Gives each supplier a risk level and says why.</li>
+    <li>Has an alert: a rule for what counts as serious, plus a ready-to-send email to the purchasing team saying what happened and what to do.</li>
+    <li>Works at your team's live link.</li>
+  </ol>
+
+  <h2>Your timeline</h2>
+  <table>
+    <tr><th>Time</th><th>What to do</th></tr>
+    <tr><td>1:30</td><td><strong>Research and plan.</strong> Each person asks their own Claude what could disrupt these suppliers and where the early warning signs show up. Compare notes, then decide which sections your dashboard will have and who owns each one.
+      <p style="margin:10px 0 4px">When you've decided, <strong>one person</strong> tells Claude: <em>"Write our plan into CLAUDE.md and save it to GitHub."</em></p>
+      <p style="margin:0 0 4px">Then <strong>everyone else</strong> does three things, so their Claude knows the plan too:</p>
+      <ol style="margin:0">
+        <li>Tell Claude: <em>"Get the latest from GitHub."</em></li>
+        <li>Type <code>/exit</code> and press Enter. Claude closes, but PowerShell stays open.</li>
+        <li>Type <code>claude --model sonnet</code> and press Enter. Claude starts again and reads the plan.</li>
+      </ol></td></tr>
+    <tr><td>1:45</td><td><strong>Build.</strong> The dashboard owner first tells Claude: <em>"Set up index.html with an empty box for each section in our plan, then save to GitHub."</em> Everyone else starts on their own section right away. It appears in its box on the dashboard once the boxes are up and you get the latest. Save to GitHub whenever something works.</td></tr>
+    <tr><td>2:45</td><td><strong>Combine and test.</strong> Everyone gets the latest and opens <code>index.html</code>. Check that every section shows up and that they work well together. Each person fixes anything in their own section.</td></tr>
+    <tr><td>3:10</td><td><strong>Final save.</strong> Everyone opens the team's live link.</td></tr>
+  </table>
+
+  <h2>How your team works</h2>
+  <ul>
+    <li><strong>One dashboard, one section each.</strong> One person owns <code>index.html</code>: the dashboard's frame and layout, with a box for each section. Everyone else owns one section, such as weather, news or alerts, in its own file in the <code>sections</code> folder. Each section shows up in its box on the dashboard, and nobody overwrites anyone else's work.</li>
+    <li><strong>Your team shares a $25 Claude budget.</strong> Type <code>/usage</code> to see what your session has cost. Starting a fresh conversation with <code>/clear</code> when you switch tasks keeps costs down.</li>
+    <li><strong>Keep it fictional.</strong> Don't add real data from your own company. Your project is public.</li>
+    <li><strong>Your key stays in PowerShell.</strong> Never paste it into a file.</li>
+  </ul>
+
+  <h3>Say these to Claude, and it handles GitHub for you</h3>
+  <div class="say">
+    <div><b>"Get the latest from GitHub."</b> Before you start something new.</div>
+    <div><b>"Save my work to GitHub with a short note."</b> Every time something works.</div>
+    <div><b>"Resolve the conflict and explain what happened."</b> If Claude reports a conflict.</div>
+  </div>
+
+  <h2>What's in your folder</h2>
+  <table>
+    <tr><th>File</th><th>What it is</th></tr>
+    <tr><td>Start-Here.html</td><td>This page.</td></tr>
+    <tr><td>CLAUDE.md</td><td>House rules Claude reads every time it starts. Your team's plan goes at the bottom.</td></tr>
+    <tr><td>index.html</td><td>Your team's dashboard. Whatever is saved here appears at your live link.</td></tr>
+    <tr><td>sections</td><td>Each teammate's section of the dashboard, one file each.</td></tr>
+    <tr><td>data</td><td>Our purchasing records: suppliers, parts, products, what goes into each bike, inventory and open orders. <code>data/README.md</code> explains every column, and <code>data/laurel-ridge-data.js</code> holds the same data in a form your dashboard can use.</td></tr>
+  </table>
+
+  <h2>Finished early? Stretch goals</h2>
+  <p>Pick any, in any order. Each one makes a good new section for the dashboard, built by whoever finishes first.</p>
+
+  <h3><span class="stars">&#9733;</span> One star</h3>
+  <ul>
+    <li><strong>Show your confidence.</strong> Next to each warning, show the source, its date, and how sure the tool is.</li>
+    <li><strong>Map it.</strong> Plot every supplier on a map, colored by risk. How many of our eggs sit in one basket?</li>
+  </ul>
+
+  <h3><span class="stars">&#9733;&#9733;</span> Two stars</h3>
+  <ul>
+    <li><strong>Find alternatives.</strong> For any supplier your tool flags, research 2 or 3 real alternative suppliers. Show where they are, what they make, and the trade-offs of switching.</li>
+    <li><strong>Stock-up advisor.</strong> Find the parts that have only one source, take longest to replace and would stop the most bikes. Recommend which to stock up on, and by how many weeks.</li>
+    <li><strong>What-if.</strong> Let the user "shut down" any supplier for a number of weeks. Show which bikes stop, when we run out of stock, and how much revenue is at risk.</li>
+    <li><strong>Add a warning sign.</strong> Watch a kind of signal you didn't start with. Ask another team what they chose.</li>
+  </ul>
+
+  <h3><span class="stars">&#9733;&#9733;&#9733;</span> Three stars</h3>
+  <ul>
+    <li><strong>Watch on its own.</strong> Type <code>/loop 10m</code> followed by instructions, and Claude re-checks your sources every 10 minutes, updates the dashboard, saves to GitHub and raises the alert when something new appears. Each check costs a little budget, so press Esc to stop it before you leave.</li>
+    <li><strong>Real email alert.</strong> Have Claude write a Google Apps Script that checks your sources every few minutes and emails your team from your workshop Gmail when something serious appears. You'll paste it into script.google.com.</li>
+    <li><strong>Red-team it.</strong> Have Claude write a misleading test warning about Cataloochee Cell Works, then check whether your tool overreacts or misses it. Use a test copy, never your live sources.</li>
+  </ul>
+
+  <p class="note">Laurel Ridge Bikeworks and Cataloochee Cell Works are fictional. The other suppliers are real companies at their real locations, but every relationship, price, order and inventory number in your folder is made up.</p>
+
+</main>
+</body>
+</html>

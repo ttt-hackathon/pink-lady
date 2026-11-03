@@ -1,0 +1,19 @@
+part_number,description,supplier_id,supplier_name,only_source,unit_cost_usd,annual_volume
+P-100,"Battery pack, 625 Wh",S01,Cataloochee Cell Works,Yes,410.00,6000
+P-200,Mid-drive motor and controller,S02,Bosch eBike Systems,Yes,780.00,3000
+P-201,Handlebar display and remote (Bosch),S02,Bosch eBike Systems,Yes,160.00,3000
+P-210,Rear hub motor kit with controller,S03,Bafang,Yes,240.00,3000
+P-211,Handlebar display (Bafang),S03,Bafang,Yes,45.00,3000
+P-300,"Frame, Ridgeline Trail",S04,Giant Manufacturing,Yes,310.00,2000
+P-301,"Frame, Mill River Commuter",S04,Giant Manufacturing,Yes,190.00,3000
+P-302,"Frame, Haywood Cargo",S04,Giant Manufacturing,Yes,420.00,1000
+P-400,"Suspension fork, 140 mm",S05,Fox Factory,Yes,390.00,2000
+P-500,"Drivetrain group, 11-speed",S06,Shimano,Yes,165.00,3000
+P-501,"Drivetrain group, 8-speed",S06,Shimano,No,70.00,3000
+P-510,"Chain, e-bike rated",S07,KMC Chain,No,18.00,6000
+P-600,"Hydraulic disc brake set, front and rear",S08,Tektro,Yes,85.00,6000
+P-700,Tire (sold singly),S09,Continental,No,28.00,12000
+P-710,Wheelset,S10,DT Swiss,Yes,220.00,2000
+P-800,"Light set, front and rear",S11,Busch & Muller,No,95.00,4000
+P-810,Saddle,S12,Selle Royal,No,22.00,6000
+P-900,Shipping carton and packing kit,S13,Uline,No,14.00,6000

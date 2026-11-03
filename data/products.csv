@@ -1,0 +1,4 @@
+product_id,product_name,category,drive_system,annual_units,weekly_build_rate,retail_price_usd
+LR-TRL,Ridgeline Trail,Electric mountain bike,Bosch mid-drive,2000,40,5200
+LR-COM,Mill River Commuter,Electric commuter bike,Bafang rear hub motor,3000,60,2400
+LR-CGO,Haywood Cargo,Electric cargo bike,Bosch mid-drive,1000,20,4800

@@ -1,0 +1,19 @@
+part_number,description,on_hand_units,safety_stock_units,weekly_usage_units,weeks_of_cover,location,as_of
+P-100,"Battery pack, 625 Wh",360,240,120,3.0,"Hendersonville, NC warehouse",2026-11-02
+P-200,Mid-drive motor and controller,540,240,60,9.0,"Hendersonville, NC warehouse",2026-11-02
+P-201,Handlebar display and remote (Bosch),600,240,60,10.0,"Hendersonville, NC warehouse",2026-11-02
+P-210,Rear hub motor kit with controller,300,180,60,5.0,"Hendersonville, NC warehouse",2026-11-02
+P-211,Handlebar display (Bafang),420,120,60,7.0,"Hendersonville, NC warehouse",2026-11-02
+P-300,"Frame, Ridgeline Trail",280,120,40,7.0,"Hendersonville, NC warehouse",2026-11-02
+P-301,"Frame, Mill River Commuter",240,180,60,4.0,"Hendersonville, NC warehouse",2026-11-02
+P-302,"Frame, Haywood Cargo",60,60,20,3.0,"Hendersonville, NC warehouse",2026-11-02
+P-400,"Suspension fork, 140 mm",200,120,40,5.0,"Hendersonville, NC warehouse",2026-11-02
+P-500,"Drivetrain group, 11-speed",420,180,60,7.0,"Hendersonville, NC warehouse",2026-11-02
+P-501,"Drivetrain group, 8-speed",480,120,60,8.0,"Hendersonville, NC warehouse",2026-11-02
+P-510,"Chain, e-bike rated",900,240,120,7.5,"Hendersonville, NC warehouse",2026-11-02
+P-600,"Hydraulic disc brake set, front and rear",480,360,120,4.0,"Hendersonville, NC warehouse",2026-11-02
+P-700,Tire (sold singly),1920,480,240,8.0,"Hendersonville, NC warehouse",2026-11-02
+P-710,Wheelset,160,80,40,4.0,"Hendersonville, NC warehouse",2026-11-02
+P-800,"Light set, front and rear",640,160,80,8.0,"Hendersonville, NC warehouse",2026-11-02
+P-810,Saddle,1200,240,120,10.0,"Hendersonville, NC warehouse",2026-11-02
+P-900,Shipping carton and packing kit,360,240,120,3.0,"Hendersonville, NC warehouse",2026-11-02
